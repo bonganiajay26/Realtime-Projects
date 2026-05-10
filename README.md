@@ -14,6 +14,7 @@ Reference implementation for low-downtime upgrades of two tightly coupled servic
 - `k8s/ingress-canary-nginx.yaml`: weighted canary at stack level
 - `k8s/ingress-version-header-nginx.yaml`: client version-aware routing
 - `docs/upgrade-strategy.md`: rollout guidance
+- `docs/interview-questions-answers.md`: interview Q&A with diagrams
 - `scripts/validate-manifests.sh`: local validation script
 
 ## Deploy
