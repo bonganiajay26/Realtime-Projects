@@ -14,6 +14,7 @@ Reference implementation for low-downtime upgrades of two tightly coupled servic
 - `k8s/ingress-canary-nginx.yaml`: weighted canary at stack level
 - `k8s/ingress-version-header-nginx.yaml`: client version-aware routing
 - `docs/upgrade-strategy.md`: rollout guidance
+- `scripts/validate-manifests.sh`: local validation script
 
 ## Deploy
 
@@ -26,3 +27,13 @@ kubectl apply -f k8s/ingress-canary-nginx.yaml
 ```
 
 Increase canary by editing `nginx.ingress.kubernetes.io/canary-weight`.
+
+## Test / Validate
+
+Run:
+
+```bash
+./scripts/validate-manifests.sh
+```
+
+This verifies overlays and ingress manifests render successfully with `kubectl kustomize` (fully offline; no cluster connection required).

@@ -3,8 +3,7 @@ kind: Kustomization
 nameSuffix: -v1
 namespace: app-v1
 resources:
-  - ../../base/component-a.yaml
-  - ../../base/component-b.yaml
+  - ../../base
 images:
   - name: ghcr.io/example/component-a
     newTag: v1.0.0
