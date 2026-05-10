@@ -14,4 +14,5 @@ jobs:
         with:
           kustomize-version: '5.4.2'
       - name: Validate manifests
+        working-directory: project-1
         run: ./scripts/validate-manifests.sh
