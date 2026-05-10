@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+nameSuffix: -v2
+namespace: app-v2
+resources:
+  - ../../base
+images:
+  - name: ghcr.io/example/component-a
+    newTag: v2.0.0
+  - name: ghcr.io/example/component-b
+    newTag: v2.0.0
+patches:
+  - target:
+      kind: Deployment
+      name: component-b
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: http://component-a-v2:8080
