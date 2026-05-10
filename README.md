@@ -20,7 +20,8 @@ Reference implementation for low-downtime upgrades of two tightly coupled servic
 
 ## Prerequisites
 
-- Kubernetes cluster with `kubectl` access
+- `kustomize` (preferred) or `kubectl` for manifest rendering checks
+- Kubernetes cluster with `kubectl` access (required for deployment)
 - NGINX ingress controller (or equivalent with compatible canary features)
 - Versioned container images for both components
 - DNS/host for ingress target
@@ -45,7 +46,7 @@ Run:
 ./scripts/validate-manifests.sh
 ```
 
-This verifies overlays and ingress manifests render successfully with `kubectl kustomize` (fully offline; no cluster connection required).
+This verifies overlays render successfully with `kustomize` (or `kubectl kustomize`) and performs offline ingress manifest checks (no cluster connection required).
 
 
 ## Troubleshooting
