@@ -17,6 +17,14 @@ Reference implementation for low-downtime upgrades of two tightly coupled servic
 - `docs/interview-questions-answers.md`: interview Q&A with diagrams
 - `scripts/validate-manifests.sh`: local validation script
 
+
+## Prerequisites
+
+- Kubernetes cluster with `kubectl` access
+- NGINX ingress controller (or equivalent with compatible canary features)
+- Versioned container images for both components
+- DNS/host for ingress target
+
 ## Deploy
 
 ```bash
@@ -38,3 +46,8 @@ Run:
 ```
 
 This verifies overlays and ingress manifests render successfully with `kubectl kustomize` (fully offline; no cluster connection required).
+
+
+## Troubleshooting
+
+See `docs/upgrade-strategy.md` for common failure modes and fixes (canary not shifting, mismatched A/B target, client version drift, CI validation issues).
