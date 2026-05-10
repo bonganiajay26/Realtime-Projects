@@ -9,4 +9,3 @@ This repository currently hosts project assets under `project-1/`.
 
 ## CI
 - Root workflow: `.github/workflows/manifest-validation.yml`
-- Project workflow: `project-1/.github/workflows/manifest-validation.yml`

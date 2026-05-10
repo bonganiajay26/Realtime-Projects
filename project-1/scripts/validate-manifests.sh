@@ -4,21 +4,68 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+TOOLS_DIR="$ROOT_DIR/.tools/bin"
+mkdir -p "$TOOLS_DIR"
+export PATH="$TOOLS_DIR:$PATH"
+
+# Set ALLOW_SKIP_RENDER=1 only for constrained local environments.
+ALLOW_SKIP_RENDER="${ALLOW_SKIP_RENDER:-0}"
+SKIP_RENDER=0
+
+try_install_kustomize() {
+  local version="5.4.2"
+  local os arch url tmpdir
+  os="$(uname | tr '[:upper:]' '[:lower:]')"
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64) arch="amd64" ;;
+    aarch64|arm64) arch="arm64" ;;
+    *) echo "error: unsupported architecture: $arch" >&2; return 1 ;;
+  esac
+
+  url="https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v${version}/kustomize_v${version}_${os}_${arch}.tar.gz"
+  tmpdir="$(mktemp -d)"
+  curl -fsSL "$url" -o "$tmpdir/kustomize.tgz" || { rm -rf "$tmpdir"; return 1; }
+  tar -xzf "$tmpdir/kustomize.tgz" -C "$tmpdir" || { rm -rf "$tmpdir"; return 1; }
+  install -m 0755 "$tmpdir/kustomize" "$TOOLS_DIR/kustomize" || { rm -rf "$tmpdir"; return 1; }
+  rm -rf "$tmpdir"
+}
+
+ensure_render_tool() {
+  if command -v kustomize >/dev/null 2>&1 || command -v kubectl >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "kustomize/kubectl not found. Attempting local kustomize install..."
+  if ! try_install_kustomize; then
+    if [[ "$ALLOW_SKIP_RENDER" == "1" ]]; then
+      echo "warning: unable to install kustomize; skipping overlay render checks because ALLOW_SKIP_RENDER=1" >&2
+      SKIP_RENDER=1
+    else
+      echo "error: unable to install kustomize and ALLOW_SKIP_RENDER is not enabled" >&2
+      return 1
+    fi
+  fi
+}
+
 kustomize_render() {
   local target="$1"
   if command -v kustomize >/dev/null 2>&1; then
     kustomize build "$target"
-  elif command -v kubectl >/dev/null 2>&1; then
-    kubectl kustomize "$target"
   else
-    echo "error: neither 'kustomize' nor 'kubectl' is installed" >&2
-    exit 1
+    kubectl kustomize "$target"
   fi
 }
 
-echo "Validating kustomize overlays via offline render..."
-( cd k8s && kustomize_render overlays/v1 >/dev/null )
-( cd k8s && kustomize_render overlays/v2 >/dev/null )
+ensure_render_tool
+
+if [[ "$SKIP_RENDER" -eq 0 ]]; then
+  echo "Validating kustomize overlays via offline render..."
+  ( cd k8s && kustomize_render overlays/v1 >/dev/null )
+  ( cd k8s && kustomize_render overlays/v2 >/dev/null )
+else
+  echo "Skipping kustomize overlay render checks."
+fi
 
 echo "Validating ingress manifests contain required top-level fields..."
 for f in k8s/ingress-canary-nginx.yaml k8s/ingress-version-header-nginx.yaml; do
@@ -28,4 +75,4 @@ for f in k8s/ingress-canary-nginx.yaml k8s/ingress-version-header-nginx.yaml; do
   grep -q "^spec:" "$f"
 done
 
-echo "All manifest validations passed (offline checks)."
+echo "All manifest validations passed."
