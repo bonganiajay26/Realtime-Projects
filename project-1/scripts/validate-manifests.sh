@@ -7,6 +7,9 @@ cd "$ROOT_DIR"
 TOOLS_DIR="$ROOT_DIR/.tools/bin"
 mkdir -p "$TOOLS_DIR"
 export PATH="$TOOLS_DIR:$PATH"
+
+# Set ALLOW_SKIP_RENDER=1 only for constrained local environments.
+ALLOW_SKIP_RENDER="${ALLOW_SKIP_RENDER:-0}"
 SKIP_RENDER=0
 
 try_install_kustomize() {
@@ -17,12 +20,11 @@ try_install_kustomize() {
   case "$arch" in
     x86_64) arch="amd64" ;;
     aarch64|arm64) arch="arm64" ;;
-    *) echo "warning: unsupported architecture: $arch" >&2; return 1 ;;
+    *) echo "error: unsupported architecture: $arch" >&2; return 1 ;;
   esac
 
   url="https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v${version}/kustomize_v${version}_${os}_${arch}.tar.gz"
   tmpdir="$(mktemp -d)"
-
   curl -fsSL "$url" -o "$tmpdir/kustomize.tgz" || { rm -rf "$tmpdir"; return 1; }
   tar -xzf "$tmpdir/kustomize.tgz" -C "$tmpdir" || { rm -rf "$tmpdir"; return 1; }
   install -m 0755 "$tmpdir/kustomize" "$TOOLS_DIR/kustomize" || { rm -rf "$tmpdir"; return 1; }
@@ -36,8 +38,13 @@ ensure_render_tool() {
 
   echo "kustomize/kubectl not found. Attempting local kustomize install..."
   if ! try_install_kustomize; then
-    echo "warning: unable to install kustomize in this environment; skipping overlay render checks" >&2
-    SKIP_RENDER=1
+    if [[ "$ALLOW_SKIP_RENDER" == "1" ]]; then
+      echo "warning: unable to install kustomize; skipping overlay render checks because ALLOW_SKIP_RENDER=1" >&2
+      SKIP_RENDER=1
+    else
+      echo "error: unable to install kustomize and ALLOW_SKIP_RENDER is not enabled" >&2
+      return 1
+    fi
   fi
 }
 
@@ -45,10 +52,8 @@ kustomize_render() {
   local target="$1"
   if command -v kustomize >/dev/null 2>&1; then
     kustomize build "$target"
-  elif command -v kubectl >/dev/null 2>&1; then
-    kubectl kustomize "$target"
   else
-    return 1
+    kubectl kustomize "$target"
   fi
 }
 
